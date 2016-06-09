@@ -84,7 +84,7 @@ class WPML_String_Translation_Table {
 				<td nowrap="nowrap">
 					<?php $this->render_view_column( $string_id ) ?>
 				</td>
-				<td width="70%">
+				<td class="wpml-st-col-string">
 					<div class="icl-st-original"<?php _icl_string_translation_rtl_div($this->string_settings['strings_language']); ?>>
 					<img src="<?php echo $sitepress->get_flag_url( $icl_string[ 'string_language' ] ); ?>"> <?php echo esc_html($icl_string['value']); ?>
 					</div>

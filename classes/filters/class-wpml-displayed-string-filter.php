@@ -9,11 +9,20 @@
 class WPML_Displayed_String_Filter extends WPML_WPDB_And_SP_User {
 
 	protected $language;
-	protected $original_cache = array();
 	protected $name_cache = array();
 	protected $untranslated_cache = array();
-	protected $use_original_cache;
 	protected $cache_is_warm = false;
+	
+	protected $object_cache = null;
+	protected $found_cache = array();
+	protected $cache_needs_saving = false;
+	
+	// Current string data.
+	protected $name;
+	protected $domain;
+	protected $gettext_context;
+	protected $name_and_gettext_context;
+	protected $key;
 
 	/**
 	 * @param wpdb $wpdb
@@ -26,14 +35,29 @@ class WPML_Displayed_String_Filter extends WPML_WPDB_And_SP_User {
 		$this->language           = $language;
 		
 		if ( $existing_filter ) {
-			$this->original_cache = $existing_filter->original_cache;
 			$this->name_cache = $existing_filter->name_cache;
 			$this->untranslated_cache = $existing_filter->untranslated_cache;
-			$this->use_original_cache = $existing_filter->use_original_cache;
 			$this->cache_is_warm = $existing_filter->cache_is_warm;
+			$this->object_cache = $existing_filter->object_cache;
+			$this->found_cache = $existing_filter->found_cache;
+			$this->cache_needs_saving = $existing_filter->cache_needs_saving;
 		} else {
-			$this->use_original_cache = $this->use_original_cache();
+			$this->object_cache = new WPML_WP_Cache( 'wpml_display_filter' );
 		}
+	}
+	
+	public function save_to_cache() {
+		if ( $this->cache_needs_saving ) {
+			foreach( array_keys( $this->found_cache ) as $cache_key ) {
+				$this->object_cache->set( $cache_key, $this->found_cache[ $cache_key ] );
+			}
+		}
+	}
+	
+	public function clear_cache() {
+		$this->found_cache = array();
+		$this->object_cache->flush_group_cache();
+		$this->cache_needs_saving = false;
 	}
 
 	/**
@@ -45,22 +69,37 @@ class WPML_Displayed_String_Filter extends WPML_WPDB_And_SP_User {
 	 * @return bool|false|string
 	 */
 	public function translate_by_name_and_context( $untranslated_text, $name, $context = "", &$has_translation = null ) {
-		$res = $this->string_from_registered( $name, $context );
-		$untranslated_text_has_content = !is_array($untranslated_text) && strlen( $untranslated_text ) !== 0 ? true : false;
-		if ( $res === false
-		     && $untranslated_text_has_content === true
-		     && $this->use_original_cache && substr( $name, 0, 10 ) !== 'URL slug: '
-			 && ! ( $context === 'default' || $context === 'Wordpess' )
-		) {
-			// Didn't find a translation with the exact name and context
-			// lookup translation from original text (but don't do it for URL slug or default or Wordpress domain)
-			$key = md5( $untranslated_text );
-			$res = isset( $this->original_cache[ $key ] ) ? $this->original_cache[ $key ] : false;
+		$this->initialize_current_string( $name, $context );
+ 		$key_name = $this->name_and_gettext_context;
+		$key_context = $this->domain;
+
+		$cache_key = $key_context . $this->language;
+		if ( ! isset( $this->found_cache[ $cache_key ] ) ) {
+			$this->found_cache[ $cache_key ] = $this->object_cache->get( $cache_key, $found );
+			if ( ! $found ) {
+				$this->found_cache[ $cache_key ] = array();
+			}
 		}
-		list( , , $key ) = $this->key_by_name_and_context( $name, $context );
-		$has_translation = $res !== false && ! isset( $this->untranslated_cache[ $key ] ) ? true : null;
-		$res             = $res === false && $untranslated_text_has_content === true ? $untranslated_text : $res;
-		$res             = $res === false ? $this->get_original_value( $name, $context ) : $res;
+		
+		$found = false;
+		if ( isset( $this->found_cache[ $cache_key ][ $key_name ] ) ) {
+			$res = $this->found_cache[ $cache_key ][ $key_name ];
+			$has_translation = $res[1];
+			$res = $res[0];
+			$found = true;
+		}
+		
+		if ( ! $found ) {
+		
+			$res = $this->string_from_registered( );
+			$untranslated_text_has_content = !is_array($untranslated_text) && strlen( $untranslated_text ) !== 0 ? true : false;
+			$has_translation = $res !== false && ! isset( $this->untranslated_cache[ $this->key ] ) ? true : null;
+			$res             = $res === false && $untranslated_text_has_content === true ? $untranslated_text : $res;
+			$res             = $res === false ? $this->get_original_value( $name, $context ) : $res;
+			
+			$this->found_cache[ $cache_key ][ $key_name ] = array( $res, $has_translation );
+			$this->cache_needs_saving = true;
+		}
 
 		return $res;
 	}
@@ -73,33 +112,29 @@ class WPML_Displayed_String_Filter extends WPML_WPDB_And_SP_User {
 	 *
 	 * @return bool
 	 */
-	protected function string_from_registered( $name, $context = "" ) {
+	protected function string_from_registered(  ) {
 		if ( $this->cache_is_warm === false ) {
 			$this->warm_cache();
 		}
 
-		$res = $this->get_string_from_cache( $name, $context );
-		$res = $res === false ? $this->try_fallback_domain( $name, $context ) : $res;
+		$res = $this->get_string_from_cache( );
+		$res = $res === false ? $this->try_fallback_domain( ) : $res;
 		
 		return $res;
 	}
 	
-	private function try_fallback_domain( $name, $context ) {
+	private function try_fallback_domain( ) {
 
 		$res = false;
 
-		if ($context === 'default' ) {
-			$res = $this->get_string_from_cache( $name, 'WordPress' );
-		} elseif ( $context === 'WordPress' ) {
-			$res = $this->get_string_from_cache( $name, 'default' );
-		} elseif ( is_array( $context ) && isset ( $context[ 'domain' ] ) ) {
-			if ( $context[ 'domain' ] === 'default' ) {
-				$context[ 'domain' ] = 'WordPress';
-				$res = $this->get_string_from_cache( $name, $context );
-			} elseif ( $context[ 'domain' ] === 'Wordpress' ) {
-				$context[ 'domain' ] = 'default';
-				$res = $this->get_string_from_cache( $name, $context );
-			}
+		if ($this->domain === 'default' ) {
+			$this->domain = 'WordPress';
+			$this->key = md5( $this->domain . $this->name_and_gettext_context );
+			$res = $this->get_string_from_cache( );
+		} elseif ( $this->domain === 'WordPress' ) {
+			$this->domain = 'default';
+			$this->key = md5( $this->domain . $this->name_and_gettext_context );
+			$res = $this->get_string_from_cache( );
 		}
 
 		return $res;
@@ -147,7 +182,6 @@ class WPML_Displayed_String_Filter extends WPML_WPDB_And_SP_User {
 		$res         = $this->wpdb->get_results( $res_prepare, ARRAY_A );
 
 		$name_cache = array();
-		$warm_cache = array();
 		foreach ( $res as $str ) {
 			if ( $str['tra'] != null ) {
 				$name_cache[ $str['ctx'] ] = &$str['tra'];
@@ -155,15 +189,30 @@ class WPML_Displayed_String_Filter extends WPML_WPDB_And_SP_User {
 				$name_cache[ $str['ctx'] ] = &$str['org'];
 			}
 			$this->untranslated_cache[ $str['ctx'] ] = $str['tra'] == '' ? true : null;
-			// use the original cache if some string were registered with 'plugin XXXX' or 'theme XXXX' context
-			// This is how they were registered before the 3.2 release of WPML
-			if ( $this->use_original_cache ) {
-				$warm_cache[ md5( stripcslashes( $str['org'] ) ) ] = stripcslashes( $name_cache[ $str['ctx'] ] );
-			}
 		}
 
-		$this->original_cache = $warm_cache;
 		$this->name_cache     = $name_cache;
+	}
+	
+	/**
+	 * @param string          $name
+	 * @param string|string[] $context
+	 */
+	protected function initialize_current_string( $name, $context ) {
+		if ( is_array( $context ) ) {
+			$this->domain          = isset ( $context[ 'domain' ] ) ? $context[ 'domain' ] : '';
+			$this->gettext_context = isset ( $context[ 'context' ] ) ? $context[ 'context' ] : '';
+		} else {
+			$this->domain = $context;
+			$this->gettext_context = '';
+		}
+		list( $this->name, $this->domain ) = array_map( array(
+			$this,
+			'truncate_long_string'
+		), array( $name, $this->domain ) );
+
+		$this->name_and_gettext_context = $this->name . $this->gettext_context;
+		$this->key = md5( $this->domain . $this->name_and_gettext_context );
 	}
 	
 	/**
@@ -189,19 +238,11 @@ class WPML_Displayed_String_Filter extends WPML_WPDB_And_SP_User {
 	}
 
 	protected function key_by_name_and_context( $name, $context ) {
-		if ( is_array( $context ) ) {
-			$domain          = isset ( $context['domain'] ) ? $context['domain'] : '';
-			$gettext_context = isset ( $context['context'] ) ? $context['context'] : '';
-		} else {
-			$domain          = $context;
-			$gettext_context = '';
-		}
-		$domain = $this->truncate_long_string( $domain );
 
 		return array(
-			$domain,
-			$gettext_context,
-			md5( $domain . $name . $gettext_context )
+			$this->domain,
+			$this->gettext_context,
+			md5( $this->domain . $this->name_and_gettext_context )
 		);
 	}
 
@@ -230,61 +271,36 @@ class WPML_Displayed_String_Filter extends WPML_WPDB_And_SP_User {
 
 		static $domains_loaded = array();
 
-		list( $domain, $gettext_context, $key ) = $this->key_by_name_and_context( $name, $context );
-		if ( ! isset( $this->name_cache[ $key ] ) ) {
-			if ( ! in_array( $domain, $domains_loaded ) ) {
+		if ( ! isset( $this->name_cache[ $this->key ] ) ) {
+			if ( ! in_array( $this->domain, $domains_loaded ) ) {
 				// preload all strings in this context
 				$query   = $this->wpdb->prepare(
 					"SELECT value, name FROM {$this->wpdb->prefix}icl_strings WHERE context = %s",
-					$domain
+					$this->domain
 				);
 				$results = $this->wpdb->get_results( $query );
 				foreach ( $results as $string ) {
-					$string_key = md5( $domain . $string->name . $gettext_context );
+					$string_key = md5( $this->domain . $string->name . $this->gettext_context );
 					if ( ! isset( $this->name_cache[ $string_key ] ) ) {
 						$this->name_cache[ $string_key ] = $string->value;
 					}
 				}
-				$domains_loaded[] = $domain;
+				$domains_loaded[] = $this->domain;
 			}
 
-			if ( ! isset( $this->name_cache[ $key ] ) ) {
-				$this->name_cache[ $key ] = false;
+			if ( ! isset( $this->name_cache[ $this->key ] ) ) {
+				$this->name_cache[ $this->key ] = false;
 			}
 		}
 
-		return $this->name_cache[ $key ];
+		return $this->name_cache[ $this->key ];
 	}
 
-	private function get_string_from_cache( $name, $context ) {
-		list( $name, $context ) = $this->truncate_name_and_context( $name, $context );
-		$key = md5( $context . $name );
-		$res = isset( $this->name_cache[ $key ] ) ? $this->name_cache[ $key ] : false;
+	private function get_string_from_cache( ) {
+		$res = isset( $this->name_cache[ $this->key ] ) ? $this->name_cache[ $this->key ] : false;
 
 		return $res;
 	}
 
-	/**
-	 * Checks if the site uses strings registered by a version older than WPML 3.2 and caches the result
-	 *
-	 * @return bool
-	 */
-	private function use_original_cache() {
-		$string_settings = $this->sitepress->get_setting( 'st', array() );
-		if ( ! isset( $string_settings['use_original_cache'] ) ) {
-			// See if any strings have been registered with 'plugin XXXX' or 'theme XXXX' context
-			// This is how they were registered before the 3.2 release of WPML
-			// We only need to do this once and then save the result
-			$query = "
-						SELECT COUNT(*)
-						FROM {$this->wpdb->prefix}icl_strings
-						WHERE context LIKE 'plugin %' OR context LIKE 'theme %' ";
-			$found = $this->wpdb->get_var( $query );
 
-			$string_settings['use_original_cache'] = $found > 0 ? true : false;
-			$this->sitepress->set_setting( 'st', $string_settings, true );
-		}
-
-		return (bool) $string_settings['use_original_cache'];
-	}
 }

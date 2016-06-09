@@ -21,12 +21,8 @@ class WPML_Admin_String_Filter extends WPML_Displayed_String_Filter {
 
 	public function translate_by_name_and_context( $untranslated_text, $name, $context = "", &$has_translation = null ) {
 		if ( $untranslated_text ) {
-			$translation = $this->string_from_registered( $name, $context );
-			if ( $translation === false && $untranslated_text !== false && $this->use_original_cache ) {
-				// lookup translation from original text
-				$key         = md5( $untranslated_text );
-				$translation = isset( $this->original_cache[ $key ] ) ? $this->original_cache[ $key ] : false;
-			}
+			$this->initialize_current_string( $name, $context );
+			$translation = $this->string_from_registered();
 
 			if ( $translation === false ) {
 				$this->register_string( $context, $name, $untranslated_text );
@@ -44,6 +40,7 @@ class WPML_Admin_String_Filter extends WPML_Displayed_String_Filter {
 		global $WPML_Sticky_Links;
 
 		$name = trim( $name ) ? $name : md5( $value );
+		$this->initialize_current_string( $name, $context );
 		/* cpt slugs - do not register them when scanning themes and plugins
 		 * if name starting from 'URL slug: '
 		 * and context is different from 'WordPress'
@@ -128,6 +125,10 @@ class WPML_Admin_String_Filter extends WPML_Displayed_String_Filter {
 		if ( ! isset( $this->name_cache[ $key ] ) ) {
 			$this->name_cache[ $key ] = $value;
 		}
+		
+		$this->found_cache[ $domain. $this->language ][ $name ] = array( $value, true );
+		$this->cache_needs_saving = true;
+
 
 		return $string_id;
 	}
