@@ -27,7 +27,7 @@ class WPML_Change_String_Language_Dialog extends WPML_WPDB_And_SP_User {
 				?>
 				
 				<br />
-				<img src="<?php echo ICL_PLUGIN_URL . '/res/img/ajax-loader.gif'; ?>" alt="loading" height="16" width="16" class="wpml_tt_spinner"/>
+				<span class="spinner"></span>
 
 				<?php wp_nonce_field( 'wpml_change_string_language_nonce', 'wpml_change_string_language_nonce' ); ?>
 

@@ -60,7 +60,8 @@ WPML_String_Translation.ChangeDomainLanguage = function () {
 			});
 
 		privateData.apply_button = jQuery('#wpml-change-domain-language-dialog-apply-button');
-		privateData.spinner = privateData.change_lang_dialog.find('.wpml_tt_spinner');
+		privateData.spinner = privateData.change_lang_dialog.find('.spinner');
+		privateData.spinner.css( 'float', 'none' ).detach().insertBefore( privateData.apply_button );
 		enableApplyButton();
 
 	};
@@ -129,7 +130,7 @@ WPML_String_Translation.ChangeDomainLanguage = function () {
 		var data;
 		var languages;
 		privateData.apply_button.prop('disabled', true);
-		privateData.spinner.show();
+		privateData.spinner.addClass( 'is-active' );
 
 		languages = [];
 		privateData.summary_div.find('.js-lang:checked').each(function () {
@@ -156,7 +157,7 @@ WPML_String_Translation.ChangeDomainLanguage = function () {
 						window.location.reload(true);
 					}
 					if (response.error) {
-						privateData.spinner.hide();
+						privateData.spinner.removeClass( 'is-active' );
 						alert(response.error);
 						privateData.apply_button.prop('disabled', false);
 					}

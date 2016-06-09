@@ -15,6 +15,12 @@
 		line-height: normal;
 	}
 }
+.wpml-st-col-string {
+	width: 70%;
+	.icl-st-original {
+		word-break: break-all;
+	}
+}
 
 .colthree {
 	width:         48%;
@@ -86,7 +92,6 @@ div.postbox div.inside {
 	overflow:    hidden;
 	white-space: nowrap;
 }
-
 #colorPickerDiv {
 	background-color: #000;
 	color:            #fff;
