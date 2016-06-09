@@ -34,6 +34,8 @@ class WPML_String_Translation extends WPML_SP_User
 			array( $this, 'check_db_for_gettext_context' ), 1000 );
 		add_action( 'wpml_language_has_switched',
 			array( $this, 'wpml_language_has_switched' ) );
+		
+		$this->sitepress->get_wp_api()->add_action( 'shutdown', array( $this, 'shutdown' ) );
 	}
 
 	function _wpml_not_installed_warning(){
@@ -54,7 +56,7 @@ class WPML_String_Translation extends WPML_SP_User
 	}
 
 	function load() {
-		global $sitepress;
+		global $sitepress, $wpdb;
 
 		if ( ! $sitepress ) {
 			return;
@@ -63,6 +65,9 @@ class WPML_String_Translation extends WPML_SP_User
 
 			return;
 		}
+
+		$upgrade = new WPML_ST_Upgrade( $wpdb, $sitepress );
+		$upgrade->run();
 
 		$this->init_active_languages( );
 
@@ -149,6 +154,12 @@ class WPML_String_Translation extends WPML_SP_User
 		add_action( 'icl_dashboard_widget_content', array( $this, 'icl_dashboard_widget_content' ) );
 
 		return true;
+	}
+	
+	function shutdown() {
+		foreach ( $this->string_filters as $filter ) {
+			$filter->save_to_cache();
+		}
 	}
 
 	function plugin_localization()
@@ -557,6 +568,8 @@ class WPML_String_Translation extends WPML_SP_User
 	 */
 	public function clear_string_filter( $lang_code ) {
 		unset( $this->string_filters[ $lang_code ] );
+		$display_cache = new WPML_WP_Cache( 'wpml_display_filter' );
+		$display_cache->flush_group_cache();
 	}
 
 	/**
@@ -602,12 +615,6 @@ class WPML_String_Translation extends WPML_SP_User
 		} else {
 			return null;
 		}
-	}
-
-	public static function clear_use_original_cache_setting( ) {
-		$string_settings = apply_filters( 'wpml_get_setting', false, 'st' );
-		unset( $string_settings[ 'use_original_cache' ] );
-		do_action( 'wpml_set_setting', 'st', $string_settings, true );
 	}
 
 	public function set_auto_register_status() {

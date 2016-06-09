@@ -64,7 +64,7 @@ class WPML_Package_Translation_HTML_Packages {
 
 		<input id="delete_packages" type="button" class="button-primary" value="<?php echo __( 'Delete Selected Packages', 'wpml-string-translation' ) ?>" disabled="disabled"/>
 		&nbsp;
-		<img src="<?php echo ICL_PLUGIN_URL . '/res/img/ajax-loader.gif'; ?>" alt="loading" height="16" width="16" class="wpml_tt_spinner"/>
+		<span class="spinner"></span>
 		<span style="display:none" class="js-delete-confirm-message"><?php echo __( "Are you sure you want to delete these packages?\nTheir strings and translations will be deleted too.", 'wpml-string-translation' ) ?></span>
 
 		<?php

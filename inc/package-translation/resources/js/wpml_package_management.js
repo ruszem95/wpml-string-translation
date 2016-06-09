@@ -41,7 +41,7 @@ var WPML_Package_Translation = WPML_Package_Translation || {};
 
 			if (confirm(jQuery('.js-delete-confirm-message').html())) {
 				jQuery('#delete_packages').prop('disabled', true);
-				jQuery('.wpml_tt_spinner').show();
+				jQuery('.spinner').css( 'float', 'none' ).addClass( 'is-active' );
 
 				var selected = jQuery('.js_package_row_cb:checked:visible');
 
@@ -75,7 +75,7 @@ var WPML_Package_Translation = WPML_Package_Translation || {};
 									);
 								}
 							);
-							jQuery('.wpml_tt_spinner').hide();
+							jQuery('.spinner').removeClass( 'is-active' );
 
 						}
 					}

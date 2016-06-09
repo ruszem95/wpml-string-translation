@@ -518,7 +518,6 @@ class WPML_String_Scanner {
 									 $obsolete_context,
 									 $old_context ) );
         
-		WPML_String_Translation::clear_use_original_cache_setting( );
     }
 	
 	protected function copy_old_translations( $contexts, $prefix ) {

@@ -45,7 +45,8 @@ WPML_String_Translation.ChangeLanguage = function () {
 
 		privateData.apply_button = jQuery('#wpml-change-language-dialog-apply-button');
 		privateData.apply_button.prop('disabled', true).addClass('button-primary');
-		privateData.spinner = privateData.change_lang_dialog.find('.wpml_tt_spinner');
+		privateData.spinner = privateData.change_lang_dialog.find('.spinner');
+		privateData.spinner.css( 'float', 'none' ).detach().insertBefore( privateData.apply_button );
 	};
 
 	var showDialog = function () {
@@ -103,7 +104,7 @@ WPML_String_Translation.ChangeLanguage = function () {
 		var checkboxes;
 		var strings;
 		privateData.apply_button.prop('disabled', true);
-		privateData.spinner.show();
+		privateData.spinner.addClass( 'is-active' );
 
 		strings = [];
 		checkboxes = get_checked_cbs();
@@ -129,7 +130,7 @@ WPML_String_Translation.ChangeLanguage = function () {
 					window.location.reload(true);
 				}
 				if (response.error) {
-					privateData.spinner.hide();
+					privateData.spinner.removeClass( 'is-active' );
 					alert(response.error);
 					privateData.apply_button.prop('disabled', false);
 				}

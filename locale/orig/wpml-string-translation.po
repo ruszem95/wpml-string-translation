@@ -331,6 +331,9 @@ msgstr ""
 msgid "You have been assigned to a new translation job on %s."
 msgstr ""
 
+msgid "Unable to get filesystem access"
+msgstr ""
+
 msgid "No records found"
 msgstr ""
 
@@ -406,7 +409,7 @@ msgstr ""
 msgid "Scan the selected plugins for strings"
 msgstr ""
 
-msgid "Automatically use theme or plugin text domains, when gettext calls does not use a string literal."
+msgid "Automatically use theme or plugin text domains when gettext calls do not use a string literal."
 msgstr ""
 
 msgid "If your theme or plugins falls in this case, enabling this option, WPML will try to retrieve this from the plugin or theme \"Text Domain\" header, if set."
@@ -649,6 +652,15 @@ msgstr ""
 msgid "Please activate WPML Multilingual CMS to have WPML String Translation working."
 msgstr ""
 
+msgid "WPML needs to update the database. This update will help improve WPML's performance when fetching translated strings."
+msgstr ""
+
+msgid "The database has been updated."
+msgstr ""
+
+msgid "Update Now"
+msgstr ""
+
 msgid "Change the language of selected strings"
 msgstr ""
 
@@ -722,6 +734,9 @@ msgid "Not marked as 'complete'. Press 'Save' to enable."
 msgstr ""
 
 msgid "(original)"
+msgstr ""
+
+msgid "%s slugs are set to be translated, but they are missing their translation"
 msgstr ""
 
 msgid "Translation complete"

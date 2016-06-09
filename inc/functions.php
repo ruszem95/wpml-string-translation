@@ -133,12 +133,11 @@ function icl_st_init(){
         exit(0);
     }
     
-    // hook into blog title and tag line
-    add_filter('option_blogname', 'wpml_st_blog_title_filter' );
-    add_filter('option_blogdescription', 'wpml_st_blog_description_filter' );
-    add_filter('widget_title', 'icl_sw_filters_widget_title', 0);  //highest priority
-    add_filter('widget_text', 'icl_sw_filters_widget_text', 0); //highest priority
-
+	$blog_name_and_desc_hooks = new WPML_ST_Blog_Name_And_Description_Hooks( $sitepress );
+	$blog_name_and_desc_hooks->init_hooks();
+	add_filter('widget_title', 'icl_sw_filters_widget_title', 0);  //highest priority
+	add_filter('widget_text', 'icl_sw_filters_widget_text', 0); //highest priority
+	
 	$setup_complete = apply_filters('WPML_get_setting', false, 'setup_complete' );
 	$theme_localization_type = apply_filters('WPML_get_setting', false, 'theme_localization_type' );
 	if ( $setup_complete
@@ -486,11 +485,17 @@ function _icl_is_string_change($result, $original_value) {
 }
 
 function icl_add_string_translation( $string_id, $language, $value = null, $status = false, $translator_id = null, $translation_service = null, $batch_id = null ) {
-	global $wpdb;
-
+	global $wpdb, $WPML_String_Translation;
+	
 	$string = new WPML_ST_String( $string_id, $wpdb );
 
-	return $string->set_translation( $language, $value, $status, $translator_id, $translation_service, $batch_id );
+	$translated_string_id = $string->set_translation( $language, $value, $status, $translator_id, $translation_service, $batch_id );
+
+	$string_filter = $WPML_String_Translation->get_string_filter( $language );
+	if ( $string_filter ) {
+		$string_filter->clear_cache();
+	}
+	return $translated_string_id;
 }
 
 /**

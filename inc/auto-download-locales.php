@@ -71,8 +71,7 @@ class WPML_ST_MO_Downloader{
 					foreach ( $this->translation_files[ $language[ 'code' ] ] as $project => $info ) {
 						$this->settings[ 'translations' ][ $language[ 'code' ] ][ $project ][ 'available' ] = $info[ 'signature' ];
 						if ( empty( $this->settings[ 'translations' ][ $language[ 'code' ] ][ $project ][ 'installed' ] ) ||
-						     isset( $this->translation_files[ $language[ 'code' ] ][ $project ][ 'available' ] ) &&
-						     $this->settings[ 'translations' ][ $language[ 'code' ] ][ $project ][ 'installed' ] != $this->translation_files[ $language[ 'code' ] ][ $project ][ 'available' ]
+						     (isset( $info[ 'available' ] ) && $this->settings[ 'translations' ][ $language[ 'code' ] ][ $project ][ 'installed' ] != $info[ 'available' ])
 						) {
 							$updates[ 'languages' ][ $language[ 'code' ] ][ $project ] = $this->settings[ 'translations' ][ $language[ 'code' ] ][ $project ][ 'available' ];
 						}
@@ -159,11 +158,14 @@ class WPML_ST_MO_Downloader{
         
         $iclsettings['st']['auto_download_mo'] = @intval($_POST['auto_download_mo']);
         $iclsettings['hide_upgrade_notice'] = implode('.', array_slice(explode('.', ICL_SITEPRESS_VERSION), 0, 3));
-        $sitepress->save_settings($iclsettings);
-        
-        echo json_encode(array('enabled' => $iclsettings['st']['auto_download_mo']));
-        
-        exit;
+	    $sitepress->save_settings($iclsettings);
+	    if ( $iclsettings['st']['auto_download_mo'] ) {
+		    try {
+			    $this->updates_check( array( 'trigger' => 'setting-changed' ) );
+		    } catch( Exception $e ) {
+	        }
+	    }
+        wp_send_json_success( array('enabled' => $iclsettings['st']['auto_download_mo'] ) );
     }
     
     function save_settings(){

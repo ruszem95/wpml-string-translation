@@ -5,7 +5,7 @@ Plugin URI: https://wpml.org/
 Description: Adds theme and plugins localization capabilities to WPML | <a href="https://wpml.org">Documentation</a> | <a href="https://wpml.org/version/wpml-3-2/">WPML 3.2 release notes</a>
 Author: OnTheGoSystems
 Author URI: http://www.onthegosystems.com/
-Version: 2.3.7
+Version: 2.3.8
 Plugin Slug: wpml-string-translation
 */
 
@@ -13,7 +13,20 @@ if ( defined( 'WPML_ST_VERSION' ) ) {
 	return;
 }
 
-define( 'WPML_ST_VERSION', '2.3.7' );
+/** @var array $bundle */
+$bundle = json_decode( file_get_contents( dirname( __FILE__ ) . '/wpml-dependencies.json' ), true );
+if ( defined( 'ICL_SITEPRESS_VERSION' ) && is_array( $bundle ) ) {
+	$sp_version_stripped = ICL_SITEPRESS_VERSION;
+	$dev_or_beta_pos = strpos( ICL_SITEPRESS_VERSION, '-' );
+	if ( $dev_or_beta_pos > 0 ) {
+		$sp_version_stripped = substr( ICL_SITEPRESS_VERSION, 0, $dev_or_beta_pos );
+	}
+	if ( version_compare( $sp_version_stripped, $bundle[ 'sitepress-multilingual-cms' ], '<' ) ) {
+		return;
+	}
+}
+
+define( 'WPML_ST_VERSION', '2.3.8' );
 
 // Do not uncomment the following line!
 // If you need to use this constant, use it in the wp-config.php file
@@ -21,11 +34,11 @@ define( 'WPML_ST_VERSION', '2.3.7' );
 
 define( 'WPML_ST_PATH', dirname( __FILE__ ) );
 
-require_once 'embedded/wpml/commons/autoloader.php';
+require_once WPML_ST_PATH . '/embedded/wpml/commons/autoloader.php';
 $wpml_auto_loader_instance = WPML_Auto_Loader::get_instance();
 $wpml_auto_loader_instance->register( WPML_ST_PATH . '/' );
 
-require WPML_ST_PATH . '/inc/wpml-dependencies-check/wpml-bundle-check.class.php';
+require WPML_ST_PATH . '/embedded/wpml/commons/src/dependencies/class-wpml-dependencies.php';
 
 function wpml_st_core_loaded() {
 	global $wpdb;
